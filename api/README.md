@@ -1,6 +1,5 @@
 # x-shop
 # x-shop
-# x-shop
 vue全家桶+nodejs+mongodb商城
 
 # someet-shop
