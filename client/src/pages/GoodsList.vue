@@ -1,6 +1,5 @@
 <template>
     <div>
-      <nav-header></nav-header>
       <nav-bread>
         <span>热门商品</span>
       </nav-bread>
@@ -23,11 +22,12 @@
                 </dd>
               </dl>
             </div>
+
             <!-- search result accessories list -->
             <div class="accessory-list-wrap">
               <div class="accessory-list col-4">
                 <ul>
-                  <li v-for="item in goodsList">
+                  <li v-for="item in goodsList" @click="goDetail(item.productId)">
                     <div class="pic">
                       <a href="#"><img v-lazy="'static/'+item.productImage" alt=""></a>
                     </div>
@@ -35,7 +35,7 @@
                       <div class="name">{{item.productName}}</div>
                       <div class="price">{{item.salePrice | currency('￥')}}</div>
                       <div class="btn-area">
-                        <a href="javascript:;" class="btn btn--m" @click="addCart(item.productId)">加入购物车</a>
+                        <a href="javascript:;" class="btn btn--m" @click.self.stop="addCart(item.productId)">加入购物车</a>
                       </div>
                     </div>
                   </li>
@@ -72,7 +72,6 @@
         </div>
       </modal>
       <div class="md-overlay" v-show="overLayFlag" @click.stop="closePop"></div>
-      <nav-footer></nav-footer>
     </div>
 </template>
 
@@ -118,10 +117,10 @@ export default {
     }
   },
   mounted () {
-    this.getGoodList()
+    this.getGoodsList()
   },
   methods: {
-    getGoodList (loadmoreFlag) {
+    getGoodsList (loadmoreFlag) {
       var params = {
         page: this.page,
         pageSize: this.pageSize,
@@ -132,14 +131,16 @@ export default {
       this.$http.get('/goods/list', {params})
       .then(res => {
         res = res.data
+        // 正在加载不显示
         this.loading = false
+        // 数据请求正常时
         if (res.status === '0') {
-          // 加载更多的情况
+          // 如果是加载更多的情况
           if (loadmoreFlag) {
-            // 将结果和之前的数据合并
+            // 将结果和之前的商品数据合并
             this.goodsList = this.goodsList.concat(res.result.list)
-            // 如果返回的数量比一页的数量小,则不允许在请求
-            this.busy = res.result.count === 0
+            // 如果返回的数量比一页的数量小，则不允许再请求
+            this.busy = res.result.count < this.pageSize
           } else {
             this.goodsList = res.result.list
             this.busy = false
@@ -147,21 +148,42 @@ export default {
         }
       })
     },
+    goDetail(productId) {
+      this.$router.push({
+        path: `/detail/${productId}`
+      })
+    },
     sortGoods () {
       this.sortFlag = !this.sortFlag
-      this.getGoodList()
+      this.page = 1
+      this.getGoodsList()
     },
     setPriceFilter (index) {
+      this.busy = false
       this.priceChecked = index
       this.page = 1
-      this.getGoodList()
+      this.getGoodsList()
     },
     loadMore () {
       this.busy = true
       this.page++
-      this.getGoodList(true)
+      this.getGoodsList(true)
+    },
+    addCart (productId) {
+      this.$http.post('/goods/addCart', {productId})
+      .then(res => {
+        res = res.data
+        if (res.status === '0') {
+          this.mdShowCart = true
+          this.$store.commit('updateCartCount', 1)
+        } else {
+          this.mdShow = true
+        }
+      })
     },
     closeModal () {
+      this.mdShow = false
+      this.mdShowCart = false
     }
   }
 }
